@@ -1,0 +1,22 @@
+<template id="page-patrimonio">
+  <section class="page patrimonio-page">
+    <div class="page-actions">
+      <div>
+        <p class="page-description">Gestão integrada de equipamentos, cautelas autenticadas, devoluções e rastreabilidade.</p>
+      </div>
+      <div id="patrimonio-page-actions" class="button-group"></div>
+    </div>
+    <div class="tabs patrimonio-tabs" role="tablist" aria-label="Seções do módulo Patrimônio">
+      <button class="tab active" data-patrimonio-tab="painel" type="button">Painel</button>
+      <button class="tab" data-patrimonio-tab="patrimonios" type="button">Patrimônios e Equipamentos</button>
+      <button class="tab" data-patrimonio-tab="cautela" type="button">Cautela</button>
+      <button class="tab" data-patrimonio-tab="cautela-administrativa" data-patrimonio-permission="CAUTELA_ADMINISTRATIVA_GERENCIAR" type="button">Cautela administrativa</button>
+      <button class="tab" data-patrimonio-tab="descautelamento" type="button">Descautelamento</button>
+      <button class="tab" data-patrimonio-tab="ativas" type="button">Cautelas Ativas <span id="patrimonio-active-count" class="tab-count">0</span></button>
+      <button class="tab" data-patrimonio-tab="historico" type="button">Histórico</button>
+      <button class="tab" data-patrimonio-tab="auditoria" type="button">Auditoria</button>
+      <button class="tab" data-patrimonio-tab="configuracoes" type="button">Categorias e Configurações</button>
+    </div>
+    <div id="patrimonio-tab-content" aria-live="polite"></div>
+  </section>
+</template>

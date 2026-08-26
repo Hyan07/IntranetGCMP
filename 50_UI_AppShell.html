@@ -1,0 +1,39 @@
+<div id="application" class="application" hidden>
+  <div id="mobile-backdrop" class="mobile-backdrop" hidden></div>
+  <aside id="sidebar" class="sidebar" aria-label="Menu principal">
+    <div class="sidebar-brand">
+      <div class="brand-mark"><span>GC</span></div>
+      <div class="sidebar-brand-copy"><strong id="app-short-name">Recursos</strong><small>Intranet institucional</small></div>
+      <button id="sidebar-pin" class="icon-btn sidebar-pin" type="button" aria-label="Recolher menu" title="Recolher menu"><i data-icon="panelLeftClose"></i></button>
+    </div>
+    <nav id="main-menu" class="main-menu"></nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-user" type="button" data-page="perfil">
+        <span id="sidebar-avatar" class="avatar">AD</span>
+        <span class="sidebar-user-copy"><strong id="sidebar-user-name">Usuário</strong><small id="sidebar-user-masp">000000-00</small></span>
+        <i data-icon="chevronRight"></i>
+      </button>
+      <button id="sidebar-logout" class="menu-item logout-item" type="button"><i data-icon="logout"></i><span>Sair</span></button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <button id="mobile-menu-button" class="icon-btn mobile-menu-button" type="button" aria-label="Abrir menu"><i data-icon="menu"></i></button>
+      <div class="page-heading"><span id="page-breadcrumb">Intranet</span><h1 id="page-title">Início</h1></div>
+    </div>
+    <div class="topbar-actions">
+      <span id="connection-indicator" class="connection-indicator"><span></span> Online</span>
+      <button id="notification-button" class="icon-btn notification-button" type="button" aria-label="Notificações"><i data-icon="bell"></i><span id="notification-badge" class="notification-badge" hidden>0</span></button>
+      <button class="header-profile" type="button" data-page="perfil">
+        <span id="header-avatar" class="avatar">AD</span>
+        <span class="header-profile-copy"><strong id="header-user-name">Usuário</strong><small id="header-user-role">Acesso institucional</small></span>
+        <i data-icon="chevronDown"></i>
+      </button>
+    </div>
+  </header>
+
+  <main id="main-content" class="main-content" tabindex="-1">
+    <div class="route-loading"><span class="spinner"></span><p>Carregando informações…</p></div>
+  </main>
+</div>

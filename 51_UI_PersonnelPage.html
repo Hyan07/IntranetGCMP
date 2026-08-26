@@ -1,0 +1,10 @@
+<template id="page-pessoal">
+  <section class="page">
+    <div class="page-actions"><div><p class="page-description">Cadastro unificado de agentes, servidores, colaboradores e terceiros vinculados.</p></div><div class="button-group"><button id="personnel-export" class="btn btn-secondary" type="button"><i data-icon="upload"></i> Exportar</button><button id="new-person-button" class="btn btn-primary" type="button"><i data-icon="plus"></i> Nova pessoa</button></div></div>
+    <article class="panel data-panel">
+      <div class="toolbar"><label class="search-box"><i data-icon="search"></i><input id="personnel-search" type="search" placeholder="Buscar pessoa, MASP, setor ou função"></label><select id="personnel-status" class="select-control"><option value="">Todas as situações</option><option>ATIVO</option><option>INATIVO</option><option>AFASTADO</option><option>DESLIGADO</option></select><select id="personnel-sector" class="select-control"><option value="">Todos os setores</option></select><button id="personnel-refresh" class="icon-btn bordered" type="button" aria-label="Atualizar"><i data-icon="refresh"></i></button></div>
+      <div id="personnel-table" class="table-region"></div>
+      <div id="personnel-pagination" class="pagination"></div>
+    </article>
+  </section>
+</template>

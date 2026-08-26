@@ -1,0 +1,48 @@
+<template id="frota-view-km">
+  <section class="frota-view" data-frota-view="km">
+    <div class="frota-view-heading">
+      <div><span class="frota-kicker">Página inicial</span><h3>Lançamento de KM</h3><p>O condutor é identificado pela sessão atual e não pode ser alterado manualmente.</p></div>
+      <button type="button" class="frota-icon-button" data-km-refresh title="Atualizar">↻</button>
+    </div>
+
+    <div class="frota-user-strip">
+      <span class="frota-user-avatar" data-km-initials>GC</span>
+      <div><small>Condutor autenticado</small><strong data-km-user-name>—</strong><span data-km-user-masp>—</span></div>
+      <time data-km-clock>—</time>
+    </div>
+
+    <div id="frota-km-active-area" hidden></div>
+
+    <div id="frota-km-open-area" class="frota-km-layout">
+      <article class="frota-panel frota-panel-accent">
+        <div class="frota-panel-title"><div><span class="frota-step">1</span><h4>Selecione a viatura</h4></div><small>Pesquise por prefixo, placa, modelo, tipo ou setor</small></div>
+        <div class="frota-combobox">
+          <label class="frota-field"><span>Viatura</span><input id="frota-km-vehicle-search" type="search" autocomplete="off" placeholder="Ex.: VTR 01, ABC1D23 ou Trânsito"></label>
+          <div id="frota-km-vehicle-results" class="frota-combobox-results" hidden></div>
+        </div>
+        <div id="frota-km-vehicle-card" class="frota-selected-vehicle"><div class="frota-empty-compact">Pesquise e selecione uma viatura para consultar os dados atuais.</div></div>
+      </article>
+
+      <article class="frota-panel">
+        <div class="frota-panel-title"><div><span class="frota-step">2</span><h4>Abra a utilização</h4></div><small>Data e hora são registradas automaticamente</small></div>
+        <form id="frota-km-open-form" class="frota-form" novalidate>
+          <div class="frota-form-grid">
+            <div class="frota-driver-confirmation frota-span-2">
+              <span>Condutor responsável por esta utilização</span>
+              <strong data-km-driver>—</strong>
+              <small data-km-driver-id>—</small>
+            </div>
+            <label class="frota-field"><span>KM inicial</span><input name="initialKm" type="number" min="0" disabled required></label>
+          </div>
+          <label class="frota-check frota-check-highlight"><input name="kmDivergent" type="checkbox"><span><strong>KM divergente</strong><small>Marque somente se o painel da viatura estiver diferente do sistema.</small></span></label>
+          <label class="frota-field" data-divergence-reason hidden><span>Justificativa da divergência *</span><textarea name="divergenceJustification" rows="3" maxlength="2000"></textarea></label>
+          <label class="frota-field"><span>Observação de saída</span><textarea name="departureObservation" rows="3" maxlength="3000" placeholder="Condições relevantes antes da saída"></textarea></label>
+          <label class="frota-check"><input name="occurrenceEnabled" type="checkbox" data-occurrence-toggle><span><strong>Deseja registrar uma observação ou defeito?</strong><small>O registro ficará vinculado à viatura e a esta movimentação.</small></span></label>
+          <div data-occurrence-container hidden></div>
+          <div class="frota-form-actions"><button class="btn btn-primary" type="submit" data-km-open-button disabled>Iniciar utilização</button></div>
+          <div class="form-message error" data-km-error hidden></div>
+        </form>
+      </article>
+    </div>
+  </section>
+</template>

@@ -1,0 +1,334 @@
+<style>
+  .frota-page {
+    --frota-950: #071a2e;
+    --frota-900: #0c2948;
+    --frota-800: #123b66;
+    --frota-700: #185287;
+    --frota-600: #1d66a4;
+    --frota-100: #e8f2fb;
+    --frota-50: #f3f8fd;
+    --frota-gold: #c99b3b;
+    display: grid;
+    gap: 18px;
+    max-width: 1540px;
+    margin: 0 auto;
+  }
+
+  .frota-hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    min-height: 148px;
+    padding: 28px 30px;
+    color: #fff;
+    border-radius: 20px;
+    background:
+      radial-gradient(circle at 86% 18%, rgba(201, 155, 59, .28), transparent 26%),
+      linear-gradient(125deg, var(--frota-950), var(--frota-800));
+    box-shadow: 0 18px 42px rgba(16, 39, 34, .18);
+  }
+
+  .frota-hero::after {
+    content: '';
+    position: absolute;
+    right: -70px;
+    bottom: -120px;
+    width: 310px;
+    height: 240px;
+    border: 34px solid rgba(255,255,255,.04);
+    border-radius: 50%;
+    transform: rotate(-18deg);
+  }
+
+  .frota-hero > * { position: relative; z-index: 1; }
+  .frota-hero h2 { margin: 4px 0 7px; font-size: clamp(25px, 3vw, 36px); letter-spacing: -.035em; }
+  .frota-hero p { max-width: 720px; margin: 0; color: rgba(255,255,255,.76); line-height: 1.55; }
+  .frota-kicker { display: block; color: var(--frota-gold); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+
+  .frota-summary { display: grid; grid-template-columns: repeat(2, minmax(116px, 1fr)); gap: 9px; min-width: 270px; }
+  .frota-summary-item { padding: 13px 15px; border: 1px solid rgba(255,255,255,.13); border-radius: 13px; background: rgba(255,255,255,.08); backdrop-filter: blur(8px); }
+  .frota-summary-item strong { display: block; font-size: 22px; line-height: 1; }
+  .frota-summary-item span { display: block; margin-top: 6px; color: rgba(255,255,255,.72); font-size: 11px; }
+
+  .frota-tabs {
+    display: flex;
+    gap: 7px;
+    padding: 7px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    border: 1px solid var(--slate-150, #dfe5e8);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 25px rgba(25, 48, 43, .06);
+  }
+
+  .frota-tabs button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 45px;
+    padding: 0 14px;
+    color: #4d605b;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    cursor: pointer;
+    transition: .18s ease;
+  }
+
+  .frota-tabs button span { display: grid; place-items: center; width: 23px; height: 23px; color: var(--frota-700); font-size: 9px; border-radius: 7px; background: var(--frota-100); }
+  .frota-tabs button:hover { color: var(--frota-900); background: var(--frota-50); }
+  .frota-tabs button.active { color: #fff; background: var(--frota-900); box-shadow: 0 7px 18px rgba(23,60,54,.22); }
+  .frota-tabs button.active span { color: var(--frota-950); background: #fff; }
+
+  .frota-content { min-height: 420px; }
+  .frota-loading { display: grid; place-items: center; gap: 12px; min-height: 360px; color: #687872; border: 1px solid #e1e8e5; border-radius: 18px; background: #fff; }
+  .frota-view { display: grid; gap: 16px; animation: frota-enter .22s ease both; }
+  @keyframes frota-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+  .frota-view-heading { display: flex; justify-content: space-between; align-items: end; gap: 18px; }
+  .frota-view-heading h3 { margin: 4px 0 3px; color: #1b322d; font-size: clamp(22px, 2.4vw, 29px); letter-spacing: -.025em; }
+  .frota-view-heading p { margin: 0; color: #6c7b77; font-size: 13px; }
+
+  .frota-user-strip {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 13px;
+    padding: 14px 17px;
+    color: #fff;
+    border-radius: 14px;
+    background: linear-gradient(105deg, var(--frota-900), var(--frota-700));
+  }
+
+  .frota-user-avatar { display: grid; place-items: center; width: 48px; height: 48px; color: var(--frota-950); font-size: 13px; font-weight: 900; border-radius: 12px; background: #fff; }
+  .frota-user-strip small, .frota-user-strip span { color: rgba(255,255,255,.72); font-size: 11px; }
+  .frota-user-strip strong { display: block; margin: 2px 0; font-size: clamp(19px, 2.2vw, 24px); line-height: 1.15; }
+  .frota-user-strip time { font-size: 12px; font-weight: 700; }
+
+  .frota-driver-confirmation, .frota-driver-highlight {
+    padding: 14px 16px;
+    border: 2px solid #b8d4cc;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #edf8f4, #fff);
+    box-shadow: 0 7px 18px rgba(23,60,54,.08);
+  }
+  .frota-driver-confirmation > span, .frota-driver-highlight > small { display: block; color: #517269; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .frota-driver-confirmation > strong, .frota-driver-highlight > strong { display: block; margin: 5px 0 2px; color: var(--frota-900); font-size: clamp(18px, 2vw, 23px); line-height: 1.2; }
+  .frota-driver-confirmation > small, .frota-driver-highlight > span { color: #637b74; font-size: 11px; font-weight: 800; }
+  .frota-driver-highlight { margin: 14px 0; border-left: 6px solid var(--frota-gold); }
+
+  .frota-km-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .9fr); gap: 16px; align-items: start; }
+  .frota-panel { padding: 20px; border: 1px solid #dde7e3; border-radius: 17px; background: #fff; box-shadow: 0 10px 30px rgba(20,50,44,.06); }
+  .frota-panel-accent { border-top: 4px solid var(--frota-600); }
+  .frota-panel-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 16px; }
+  .frota-panel-title > div { display: flex; align-items: center; gap: 10px; }
+  .frota-panel-title h4 { margin: 0; color: #203831; font-size: 16px; }
+  .frota-panel-title small { color: #7b8985; font-size: 10px; text-align: right; }
+  .frota-step { display: grid; place-items: center; width: 29px; height: 29px; color: #fff; font-size: 10px; font-weight: 900; border-radius: 9px; background: var(--frota-800); }
+
+  .frota-form { display: grid; gap: 14px; }
+  .frota-form-grid, .frota-filter-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+  .frota-field { display: grid; align-content: start; gap: 6px; min-width: 0; color: #455852; font-size: 11px; font-weight: 750; }
+  .frota-field > span { min-height: 14px; }
+  .frota-field input, .frota-field select, .frota-field textarea,
+  .frota-toolbar input, .frota-toolbar select {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 11px;
+    color: #263a35;
+    font: inherit;
+    font-size: 13px;
+    border: 1px solid #cfdbd7;
+    border-radius: 10px;
+    outline: none;
+    background: #fff;
+    transition: border-color .16s, box-shadow .16s;
+  }
+
+  .frota-field textarea { resize: vertical; line-height: 1.45; }
+  .frota-field input:focus, .frota-field select:focus, .frota-field textarea:focus,
+  .frota-toolbar input:focus, .frota-toolbar select:focus { border-color: var(--frota-600); box-shadow: 0 0 0 3px rgba(52,123,108,.13); }
+  .frota-field input:disabled { color: #5f6f6a; border-color: #dde5e2; background: #f3f6f5; }
+  .frota-span-2 { grid-column: span 2; }
+
+  .frota-check { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; color: #334943; font-size: 12px; border: 1px solid #dce5e2; border-radius: 11px; background: #f9fbfa; cursor: pointer; }
+  .frota-check input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--frota-700); }
+  .frota-check span { flex: 1; }
+  .frota-check strong, .frota-check small { display: block; }
+  .frota-check small { margin-top: 3px; color: #75847f; font-size: 10px; line-height: 1.4; }
+  .frota-check-highlight { border-color: #dfc98e; background: #fffaf0; }
+  .frota-check-inline { align-items: center; min-height: 42px; padding: 8px 11px; white-space: nowrap; }
+  .frota-check-inline input { margin: 0; }
+
+  .frota-form-actions, .frota-filter-actions { display: flex; justify-content: flex-end; gap: 9px; }
+  .frota-filter-actions { grid-column: 1 / -1; align-items: end; }
+
+  .frota-combobox { position: relative; }
+  .frota-combobox-results { position: absolute; z-index: 12; top: calc(100% + 6px); right: 0; left: 0; max-height: 310px; overflow-y: auto; border: 1px solid #d7e1de; border-radius: 12px; background: #fff; box-shadow: 0 18px 40px rgba(20,50,44,.18); }
+  .frota-combobox-option { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; width: 100%; padding: 11px 13px; text-align: left; border: 0; border-bottom: 1px solid #edf1ef; background: #fff; cursor: pointer; }
+  .frota-combobox-option:last-child { border-bottom: 0; }
+  .frota-combobox-option:hover { background: var(--frota-50); }
+  .frota-combobox-option strong { color: #233b35; font-size: 13px; }
+  .frota-combobox-option span, .frota-combobox-option small { color: #71807c; font-size: 10px; }
+  .frota-combobox-option .status { grid-row: span 2; align-self: center; }
+
+  .frota-selected-vehicle { margin-top: 13px; }
+  .frota-empty-compact { padding: 26px 16px; color: #74827e; font-size: 12px; text-align: center; border: 1px dashed #cdd9d5; border-radius: 12px; background: #fbfcfc; }
+  .frota-vehicle-spotlight { overflow: hidden; border: 1px solid #d6e2de; border-radius: 14px; }
+  .frota-vehicle-spotlight-header { display: flex; justify-content: space-between; gap: 14px; padding: 14px 15px; color: #fff; background: var(--frota-900); }
+  .frota-vehicle-spotlight-header strong { display: block; font-size: 17px; }
+  .frota-vehicle-spotlight-header small { color: rgba(255,255,255,.7); }
+  .frota-data-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: #e4ebe8; }
+  .frota-data-item { min-height: 66px; padding: 11px 12px; background: #fff; }
+  .frota-data-item small { display: block; margin-bottom: 4px; color: #7a8984; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .frota-data-item strong, .frota-data-item span { display: block; overflow-wrap: anywhere; color: #2e433d; font-size: 12px; }
+  .frota-data-item.alert strong { color: #a33a31; }
+
+  .frota-active-card { padding: 21px; color: #fff; border-radius: 17px; background: linear-gradient(125deg, #173c36, #286558); box-shadow: 0 16px 36px rgba(23,60,54,.22); }
+  .frota-active-card-head { display: flex; justify-content: space-between; gap: 18px; align-items: start; }
+  .frota-active-card h4 { margin: 5px 0; font-size: 23px; }
+  .frota-active-card p { margin: 0; color: rgba(255,255,255,.7); }
+  .frota-active-card .frota-data-grid { margin: 17px 0; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.12); }
+  .frota-active-card .frota-data-item { background: rgba(255,255,255,.08); }
+  .frota-active-card .frota-data-item small { color: rgba(255,255,255,.6); }
+  .frota-active-card .frota-data-item strong, .frota-active-card .frota-data-item span { color: #fff; }
+  .frota-active-card .btn { background: #fff; color: var(--frota-900); }
+
+  .frota-toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) auto auto auto; gap: 9px; padding: 11px; border: 1px solid #dde6e3; border-radius: 14px; background: #fff; }
+  .frota-search { position: relative; display: flex; align-items: center; min-width: 0; }
+  .frota-search > span { position: absolute; left: 12px; color: #7b8985; font-size: 18px; pointer-events: none; }
+  .frota-search input { padding-left: 38px; }
+  .frota-icon-button { display: grid; place-items: center; min-width: 42px; height: 42px; color: var(--frota-800); font-size: 19px; border: 1px solid #cfdbd7; border-radius: 10px; background: #fff; cursor: pointer; }
+  .frota-icon-button:hover { color: #fff; border-color: var(--frota-700); background: var(--frota-700); }
+
+  .frota-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .frota-vehicle-card { display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; border: 1px solid #dce5e2; border-radius: 16px; background: #fff; box-shadow: 0 9px 26px rgba(20,50,44,.055); transition: transform .18s, box-shadow .18s; }
+  .frota-vehicle-card:hover { transform: translateY(-2px); box-shadow: 0 15px 32px rgba(20,50,44,.1); }
+  .frota-vehicle-card-head { display: flex; justify-content: space-between; gap: 10px; padding: 16px; border-bottom: 1px solid #e6ecea; background: linear-gradient(180deg, #fff, #f7faf9); }
+  .frota-vehicle-card-head h4 { margin: 0 0 3px; color: #213a34; font-size: 18px; }
+  .frota-vehicle-card-head p { margin: 0; color: #6d7c78; font-size: 11px; }
+  .frota-vehicle-card-body { padding: 14px 16px; }
+  .frota-card-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .frota-card-stat { padding: 9px 10px; border-radius: 9px; background: #f3f7f5; }
+  .frota-card-stat small { display: block; color: #7c8b86; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+  .frota-card-stat strong { display: block; margin-top: 3px; overflow: hidden; color: #2c423c; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .frota-card-stat.frota-card-driver { grid-column: 1 / -1; border: 1px solid #c7ded7; background: #eaf6f2; }
+  .frota-card-stat.frota-card-driver small { color: #4e7067; }
+  .frota-card-stat.frota-card-driver strong { color: var(--frota-900); font-size: 14px; white-space: normal; }
+  .frota-card-note { min-height: 51px; margin-top: 10px; padding: 9px 10px; color: #5d6f69; font-size: 10px; line-height: 1.45; border-left: 3px solid var(--frota-gold); border-radius: 4px 9px 9px 4px; background: #fffbf1; }
+  .frota-card-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px; border-top: 1px solid #e8edeb; }
+  .frota-card-actions button { padding: 7px 9px; color: var(--frota-800); font: inherit; font-size: 9px; font-weight: 800; border: 1px solid #d6e0dd; border-radius: 8px; background: #fff; cursor: pointer; }
+  .frota-card-actions button:hover { border-color: var(--frota-600); background: var(--frota-50); }
+
+  .frota-filter-panel { grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 15px; border: 1px solid #dce5e2; border-radius: 15px; background: #fff; }
+
+  .frota-table-wrap { min-height: 150px; overflow-x: auto; border: 1px solid #dce5e2; border-radius: 15px; background: #fff; }
+  .frota-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .frota-table th { padding: 11px 13px; color: #687a74; font-size: 9px; letter-spacing: .06em; text-align: left; text-transform: uppercase; border-bottom: 1px solid #dce5e2; background: #f5f8f7; }
+  .frota-table td { padding: 12px 13px; color: #354b45; vertical-align: middle; border-bottom: 1px solid #e9eeec; }
+  .frota-table tr:last-child td { border-bottom: 0; }
+  .frota-table td strong, .frota-table td small { display: block; }
+  .frota-table td small { margin-top: 3px; color: #7a8985; font-size: 9px; }
+  .frota-table-actions { display: flex; justify-content: flex-end; gap: 6px; }
+  .frota-table-actions button, .frota-table-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 31px; padding: 0 9px; color: var(--frota-800); font: inherit; font-size: 9px; font-weight: 800; text-decoration: none; border: 1px solid #d3deda; border-radius: 8px; background: #fff; cursor: pointer; }
+
+  .frota-file-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .frota-file-card { display: grid; grid-template-columns: auto 1fr; gap: 12px; padding: 15px; border: 1px solid #dce5e2; border-radius: 14px; background: #fff; }
+  .frota-file-icon { display: grid; place-items: center; width: 44px; height: 50px; color: #fff; font-size: 9px; font-weight: 900; border-radius: 9px; background: var(--frota-700); }
+  .frota-file-card h4 { margin: 0 0 4px; overflow: hidden; color: #283e38; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .frota-file-card p { margin: 5px 0; color: #6c7d77; font-size: 10px; line-height: 1.45; }
+  .frota-file-card small { color: #89948f; font-size: 9px; }
+  .frota-file-actions { grid-column: 1 / -1; display: flex; gap: 7px; padding-top: 9px; border-top: 1px solid #e8eeeb; }
+
+  .frota-pagination { display: flex; justify-content: space-between; align-items: center; min-height: 40px; color: #6f7f7a; font-size: 10px; }
+  .frota-pagination-buttons { display: flex; gap: 4px; }
+  .frota-pagination button { min-width: 31px; height: 31px; color: #4d615b; font: inherit; font-size: 10px; border: 1px solid #d4dfdb; border-radius: 8px; background: #fff; cursor: pointer; }
+  .frota-pagination button.active { color: #fff; border-color: var(--frota-800); background: var(--frota-800); }
+  .frota-pagination button:disabled { opacity: .42; cursor: default; }
+
+  .frota-empty { display: grid; place-items: center; gap: 7px; min-height: 190px; padding: 25px; color: #74827e; text-align: center; }
+  .frota-empty strong { color: #425650; font-size: 14px; }
+  .frota-empty p { max-width: 430px; margin: 0; font-size: 11px; line-height: 1.5; }
+
+  .frota-occurrence-box { display: grid; gap: 12px; padding: 14px; border: 1px solid #e4cf98; border-radius: 12px; background: #fffaf0; }
+  .frota-occurrence-box .frota-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .frota-modal-backdrop { position: fixed; z-index: 1200; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(10,24,21,.64); backdrop-filter: blur(5px); }
+  .frota-modal { width: min(680px, 100%); max-height: min(90vh, 900px); overflow: hidden; border-radius: 18px; background: #fff; box-shadow: 0 28px 80px rgba(5,18,15,.34); animation: frota-modal-in .18s ease both; }
+  .frota-modal.wide { width: min(1040px, 100%); }
+  @keyframes frota-modal-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+  .frota-modal-header { display: flex; justify-content: space-between; align-items: start; gap: 15px; padding: 19px 21px; color: #fff; background: linear-gradient(110deg, var(--frota-950, #102722), var(--frota-700, #286558)); }
+  .frota-modal-header h3 { margin: 4px 0 0; font-size: 20px; }
+  .frota-modal-close { display: grid; place-items: center; width: 34px; height: 34px; color: #fff; font-size: 24px; border: 1px solid rgba(255,255,255,.22); border-radius: 9px; background: rgba(255,255,255,.08); cursor: pointer; }
+  .frota-modal form { display: grid; grid-template-rows: minmax(0,1fr) auto auto; max-height: calc(min(90vh, 900px) - 82px); }
+  .frota-modal-body { overflow-y: auto; padding: 20px 21px; }
+  .frota-modal-body .frota-section-title { grid-column: 1 / -1; margin: 8px 0 0; padding: 10px 0 5px; color: var(--frota-800, #205047); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid #dfe7e4; }
+  .frota-modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid #e2e9e6; background: #f8faf9; }
+  .frota-modal [data-frota-modal-error] { margin: 0 20px 12px; }
+  .frota-detail-json { max-height: 420px; overflow: auto; margin: 0; padding: 14px; color: #dcefe8; font-size: 11px; line-height: 1.6; border-radius: 11px; background: #142923; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  .frota-danger-text { color: #a23830 !important; }
+  .frota-muted { color: #7a8985; }
+
+  @media (max-width: 1220px) {
+    .frota-card-grid, .frota-file-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .frota-filter-panel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .frota-km-layout { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 820px) {
+    .frota-hero { align-items: flex-start; flex-direction: column; padding: 23px; }
+    .frota-summary { width: 100%; min-width: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .frota-summary-item { padding: 10px; }
+    .frota-summary-item strong { font-size: 18px; }
+    .frota-summary-item span { font-size: 9px; }
+    .frota-toolbar { grid-template-columns: 1fr 1fr auto; }
+    .frota-toolbar .frota-search { grid-column: 1 / -1; }
+    .frota-filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .frota-file-grid { grid-template-columns: 1fr; }
+    .frota-occurrence-box .frota-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 600px) {
+    .frota-page { gap: 12px; }
+    .frota-hero { min-height: 0; padding: 19px; border-radius: 15px; }
+    .frota-hero p { font-size: 12px; }
+    .frota-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .frota-tabs { position: sticky; z-index: 20; top: 0; margin-inline: -2px; border-radius: 13px; }
+    .frota-tabs button { min-height: 41px; padding: 0 11px; font-size: 10px; }
+    .frota-view-heading { align-items: stretch; flex-direction: column; }
+    .frota-view-heading > .btn { align-self: flex-start; }
+    .frota-user-strip { grid-template-columns: auto 1fr; }
+    .frota-user-strip time { grid-column: 1 / -1; padding-top: 9px; border-top: 1px solid rgba(255,255,255,.15); }
+    .frota-panel { padding: 15px; border-radius: 14px; }
+    .frota-panel-title { align-items: flex-start; flex-direction: column; }
+    .frota-panel-title small { text-align: left; }
+    .frota-form-grid, .frota-filter-panel, .frota-occurrence-box .frota-form-grid { grid-template-columns: 1fr; }
+    .frota-span-2 { grid-column: auto; }
+    .frota-filter-actions { grid-column: auto; }
+    .frota-card-grid { grid-template-columns: 1fr; }
+    .frota-data-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .frota-toolbar { grid-template-columns: 1fr auto; }
+    .frota-toolbar select, .frota-toolbar .frota-check-inline { grid-column: 1 / -1; }
+    .frota-table thead { display: none; }
+    .frota-table, .frota-table tbody, .frota-table tr, .frota-table td { display: block; width: 100%; }
+    .frota-table tr { padding: 11px 13px; border-bottom: 1px solid #e3eae7; }
+    .frota-table td { display: grid; grid-template-columns: 104px 1fr; gap: 8px; padding: 5px 0; border: 0; }
+    .frota-table td::before { content: attr(data-label); color: #7b8985; font-size: 8px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+    .frota-table-actions { justify-content: flex-start; }
+    .frota-modal-backdrop { align-items: end; padding: 0; }
+    .frota-modal, .frota-modal.wide { width: 100%; max-height: 94vh; border-radius: 18px 18px 0 0; }
+    .frota-modal form { max-height: calc(94vh - 78px); }
+    .frota-modal-body { padding: 17px 15px; }
+    .frota-modal-footer { position: sticky; bottom: 0; padding: 12px 15px; }
+  }
+</style>
