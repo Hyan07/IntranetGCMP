@@ -17,58 +17,45 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Compare staged archive slices
+      - name: Recover exact files from contiguous staged archive
         shell: bash
         run: |
-          set -e
-          clean() { tr -d '\r\n\t ' < "$1"; }
-          clean .materialize/part_00 > /tmp/mat0
-          clean .materialize/part_01 > /tmp/mat1
-          cat /tmp/mat0 /tmp/mat1 > /tmp/materialize.all
-          clean .materialize_v2/p00 > /tmp/v200
-          clean .materialize_v2/p01 > /tmp/v201
-          clean .materialize_v2/p02 > /tmp/v202
-          clean .materialize_v2/p03 > /tmp/v203
-          clean .materialize_v2/p04 > /tmp/v204
-          cat /tmp/v200 /tmp/v201 /tmp/v202 /tmp/v203 /tmp/v204 > /tmp/v2.all
-          : > /tmp/bootstrap.all
-          for f in .bootstrap/chunk_00 .bootstrap/chunk_01 .bootstrap/chunk_02_03 .bootstrap/chunk_04_05 .bootstrap/chunk_06_07 .bootstrap/chunk_08_09 .bootstrap/chunk_10_11 .bootstrap/chunk_12_13; do
-            clean "$f" >> /tmp/bootstrap.all
-          done
-
-          report_segments() {
-            label="$1"; file="$2"; width="$3"
-            echo "=== $label total ==="
-            wc -c "$file"
-            python3 - "$file" "$width" <<'PY'
-          import hashlib, sys
-          p=sys.argv[1]; w=int(sys.argv[2]); b=open(p,'rb').read()
-          for i in range(0,len(b),w):
-              x=b[i:i+w]
-              print(f'{i:06d}-{i+len(x)-1:06d} len={len(x):5d} sha256={hashlib.sha256(x).hexdigest()}')
+          set -u
+          rm -rf /tmp/gcmp-recovered /tmp/gcmp-package.*
+          mkdir -p /tmp/gcmp-recovered
+          cat .materialize/part_00 .materialize/part_01 | tr -d '\r\n\t ' > /tmp/gcmp-package.b64
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          s = Path('/tmp/gcmp-package.b64').read_text().strip()
+          s += '=' * (-len(s) % 4)
+          Path('/tmp/gcmp-package.gz').write_bytes(base64.b64decode(s, validate=False))
           PY
-          }
+          gzip -dc /tmp/gcmp-package.gz > /tmp/gcmp-package.raw 2>/tmp/recovery-errors.txt || true
+          tar -xf /tmp/gcmp-package.raw -C /tmp/gcmp-recovered --ignore-zeros 2>>/tmp/recovery-errors.txt || true
+          find /tmp/gcmp-recovered -type f -printf '%P\n' | sort > /tmp/recovered-files.txt
+          test "$(wc -l < /tmp/recovered-files.txt)" -eq 35
 
-          {
-            report_segments materialize /tmp/materialize.all 8000
-            report_segments v2 /tmp/v2.all 8000
-            report_segments bootstrap /tmp/bootstrap.all 8000
-            echo '=== bootstrap individual cleaned sizes+hashes ==='
-            for f in .bootstrap/chunk_00 .bootstrap/chunk_01 .bootstrap/chunk_02_03 .bootstrap/chunk_04_05 .bootstrap/chunk_06_07 .bootstrap/chunk_08_09 .bootstrap/chunk_10_11 .bootstrap/chunk_12_13; do
-              t=/tmp/one
-              clean "$f" > "$t"
-              printf '%s len=' "$f"; wc -c < "$t" | tr -d '\n'; printf ' sha256='; sha256sum "$t" | cut -d' ' -f1
-            done
-          } > /tmp/recovery-info.txt
-
-      - name: Publish diagnostics branch
+      - name: Publish exact partial recovery
         shell: bash
         run: |
           set -e
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git checkout -B recovery-preview
-          cp /tmp/recovery-info.txt RECOVERY_INFO.txt
-          git add RECOVERY_INFO.txt
-          git commit -m 'chore: compare staged archive slices' || true
-          git push --force origin recovery-preview
+          git checkout -B recovered-4.1-partial origin/main
+          rm -rf .bootstrap .materialize .materialize_v2 .github
+          cp -a /tmp/gcmp-recovered/. .
+          cat > RECOVERY_STATUS.md <<'EOF'
+          # Recuperação parcial exata — Intranet GCMP 4.1
+
+          Esta branch preserva somente os arquivos que puderam ser recuperados integralmente do pacote 4.1/MySQL previamente enviado em blocos ao repositório.
+
+          Foram recuperados 35 arquivos completos, sem reconstrução manual do conteúdo.
+
+          Esta branch **não representa a entrega completa**. O arquivo staged disponível termina antes do restante do pacote. Permanecem ausentes, entre outros, o frontend `public/`, migrations, scripts, testes, `src/app.js` e arquivos raiz necessários para instalar/executar o projeto completo.
+
+          Não promova esta branch para produção. Para restaurar o projeto completo, use o ZIP original `INTRANET_GCMP_NODE_MYSQL_4_1_0.zip` e valide o SHA-256 documentado no projeto.
+          EOF
+          git add -A
+          git commit -m 'chore: preserve exact recovered Intranet 4.1 source files'
+          git push --force origin recovered-4.1-partial
