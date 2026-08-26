@@ -17,16 +17,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Rebuild v2 partial archive and recover complete files
+      - name: Rebuild partial archive and recover complete files
         shell: bash
         run: |
           set -u
           rm -rf /tmp/gcmp-recovered /tmp/gcmp-package.*
           mkdir -p /tmp/gcmp-recovered
 
-          cat .materialize_v2/p00 .materialize_v2/p01 .materialize_v2/p02 .materialize_v2/p03 .materialize_v2/p04 \
-            | tr -d '\r\n\t ' > /tmp/gcmp-package.b64
-
+          cat .materialize/part_00 .materialize/part_01 | tr -d '\r\n\t ' > /tmp/gcmp-package.b64
           python3 - <<'PY'
           import base64
           from pathlib import Path
@@ -37,7 +35,7 @@ jobs:
 
           {
             echo '=== source ==='
-            echo '.materialize_v2/p00..p04'
+            echo '.materialize/part_00 + part_01'
             echo '=== compressed ==='
             file /tmp/gcmp-package.gz || true
             echo '=== compressed bytes ==='
@@ -50,12 +48,9 @@ jobs:
             file /tmp/gcmp-package.raw || true
             echo '=== decompressed bytes ==='
             wc -c /tmp/gcmp-package.raw || true
-            echo '=== first bytes ==='
-            xxd -l 64 /tmp/gcmp-package.raw || true
           } >> /tmp/recovery-info.txt
 
           tar -xf /tmp/gcmp-package.raw -C /tmp/gcmp-recovered --ignore-zeros 2>>/tmp/recovery-info.txt || true
-
           echo '=== recovered files ===' >> /tmp/recovery-info.txt
           find /tmp/gcmp-recovered -type f -printf '%P\n' | sort | tee -a /tmp/recovery-info.txt
 
@@ -71,9 +66,6 @@ jobs:
           cp -a /tmp/gcmp-recovered/. recovered_project/ || true
           cp /tmp/recovery-info.txt RECOVERY_INFO.txt
           git add RECOVERY_INFO.txt recovered_project
-          if git diff --cached --quiet; then
-            echo 'Nothing recovered.'
-            exit 0
-          fi
-          git commit -m 'chore: recover v2 staged Intranet project preview'
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'chore: recover larger staged Intranet project preview'
           git push --force origin recovery-preview
