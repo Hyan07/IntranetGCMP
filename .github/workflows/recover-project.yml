@@ -1,10 +1,6 @@
 name: Recover staged project
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/recover-project.yml'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -21,26 +17,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Rebuild partial archive and recover complete files
+      - name: Rebuild v2 partial archive and recover complete files
         shell: bash
         run: |
           set -u
           rm -rf /tmp/gcmp-recovered /tmp/gcmp-package.*
           mkdir -p /tmp/gcmp-recovered
 
-          cat \
-            .bootstrap/chunk_00 \
-            .bootstrap/chunk_01 \
-            .bootstrap/chunk_02_03 \
-            .bootstrap/chunk_04_05 \
-            .bootstrap/chunk_06_07 \
-            .bootstrap/chunk_08_09 \
-            .bootstrap/chunk_10_11 \
-            .bootstrap/chunk_12_13 \
+          cat .materialize_v2/p00 .materialize_v2/p01 .materialize_v2/p02 .materialize_v2/p03 .materialize_v2/p04 \
             | tr -d '\r\n\t ' > /tmp/gcmp-package.b64
 
-          base64 -d /tmp/gcmp-package.b64 > /tmp/gcmp-package.gz || true
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          s = Path('/tmp/gcmp-package.b64').read_text().strip()
+          s += '=' * (-len(s) % 4)
+          Path('/tmp/gcmp-package.gz').write_bytes(base64.b64decode(s, validate=False))
+          PY
+
           {
+            echo '=== source ==='
+            echo '.materialize_v2/p00..p04'
             echo '=== compressed ==='
             file /tmp/gcmp-package.gz || true
             echo '=== compressed bytes ==='
@@ -57,11 +54,7 @@ jobs:
             xxd -l 64 /tmp/gcmp-package.raw || true
           } >> /tmp/recovery-info.txt
 
-          if tar -tf /tmp/gcmp-package.raw >/tmp/tar-list.txt 2>>/tmp/recovery-info.txt; then
-            tar -xf /tmp/gcmp-package.raw -C /tmp/gcmp-recovered
-          else
-            tar -xf /tmp/gcmp-package.raw -C /tmp/gcmp-recovered --ignore-zeros 2>>/tmp/recovery-info.txt || true
-          fi
+          tar -xf /tmp/gcmp-package.raw -C /tmp/gcmp-recovered --ignore-zeros 2>>/tmp/recovery-info.txt || true
 
           echo '=== recovered files ===' >> /tmp/recovery-info.txt
           find /tmp/gcmp-recovered -type f -printf '%P\n' | sort | tee -a /tmp/recovery-info.txt
@@ -82,5 +75,5 @@ jobs:
             echo 'Nothing recovered.'
             exit 0
           fi
-          git commit -m 'chore: recover staged Intranet project preview'
+          git commit -m 'chore: recover v2 staged Intranet project preview'
           git push --force origin recovery-preview
