@@ -1,79 +1,10 @@
-import { Router } from 'express';
-import { randomUUID } from 'node:crypto';
-import { pool, transaction } from '../config/db.js';
-import { asyncRoute, pagination, requiredFields, normalizeMasp, AppError } from '../lib/http.js';
-import { hashPassword } from '../lib/security.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
-import { audit } from '../lib/audit.js';
-
-export const usersRoutes = Router();
-usersRoutes.use(requireAuth);
-
-usersRoutes.get('/', requirePermission('usuarios.visualizar'), asyncRoute(async (req, res) => {
-  const { page, limit, offset } = pagination(req);
-  const q = String(req.query.q || '').trim();
-  const params = [];
-  let where = '';
-  if (q) {
-    where = 'WHERE nome LIKE ? OR masp LIKE ? OR email LIKE ? OR cargo LIKE ? OR setor LIKE ?';
-    const like = `%${q}%`; params.push(like, like, like, like, like);
-  }
-  const [rows] = await pool.execute(
-    `SELECT id, id_pessoa, masp, nome, email, telefone, cargo, funcao, setor, status, trocar_senha, ultimo_acesso, criado_em, atualizado_em
-       FROM usuarios ${where} ORDER BY nome LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
-  const [countRows] = await pool.execute(`SELECT COUNT(*) total FROM usuarios ${where}`, params);
-  res.json({ ok: true, data: rows, pagination: { page, limit, total: Number(countRows[0].total) } });
-}));
-
-usersRoutes.get('/permissions/catalog', requirePermission('usuarios.visualizar'), asyncRoute(async (_req, res) => {
-  const [rows] = await pool.execute('SELECT id, codigo, modulo, acao, descricao FROM permissoes WHERE ativa=1 ORDER BY modulo, codigo');
-  res.json({ ok: true, data: rows });
-}));
-
-usersRoutes.get('/:id/permissions', requirePermission('usuarios.visualizar'), asyncRoute(async (req, res) => {
-  const [rows] = await pool.execute(
-    `SELECT p.codigo, up.permitido
-       FROM permissoes p
-       LEFT JOIN usuario_permissoes up ON up.id_permissao=p.id AND up.id_usuario=?
-      WHERE p.ativa=1 ORDER BY p.modulo, p.codigo`,
-    [req.params.id]
-  );
-  res.json({ ok: true, data: rows });
-}));
-
-usersRoutes.post('/', requirePermission('usuarios.criar'), asyncRoute(async (req, res) => {
-  requiredFields(req.body, ['masp', 'nome', 'password']);
-  const id = randomUUID();
-  const senhaHash = await hashPassword(req.body.password);
-  await pool.execute(
-    `INSERT INTO usuarios (id, id_pessoa, masp, nome, email, telefone, cargo, funcao, setor, status, senha_hash, trocar_senha, criado_em, atualizado_em)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
-    [
-      id, req.body.idPessoa || null, normalizeMasp(req.body.masp), String(req.body.nome).trim(),
-      String(req.body.email || '').trim().toLowerCase() || null, req.body.telefone || null, req.body.cargo || null,
-      req.body.funcao || null, req.body.setor || null, req.body.status || 'ATIVO', senhaHash
-    ]
-  );
-  await audit(req, { module: 'usuarios', action: 'CRIAR', recordId: id, after: { ...req.body, password: undefined } });
-  res.status(201).json({ ok: true, id });
-}));
-
-usersRoutes.put('/:id/permissions', requirePermission('usuarios.gerenciar_permissoes'), asyncRoute(async (req, res) => {
-  if (!Array.isArray(req.body.permissions)) throw new AppError(400, 'INVALID_PERMISSIONS', 'Informe uma lista de permissões.');
-  await transaction(async (db) => {
-    const [catalog] = await db.query('SELECT id, codigo FROM permissoes WHERE ativa=1');
-    const desired = new Set(req.body.permissions);
-    for (const permission of catalog) {
-      await db.execute(
-        `INSERT INTO usuario_permissoes (id, id_usuario, id_permissao, permitido, concedido_por, concedido_em)
-         VALUES (?, ?, ?, ?, ?, NOW())
-         ON DUPLICATE KEY UPDATE permitido=VALUES(permitido), concedido_por=VALUES(concedido_por), concedido_em=NOW()`,
-        [randomUUID(), req.params.id, permission.id, desired.has(permission.codigo) ? 1 : 0, req.session.user.id]
-      );
-    }
-  });
-  await audit(req, { module: 'usuarios', action: 'ALTERAR_PERMISSOES', recordId: req.params.id, after: req.body.permissions, justification: req.body.justificativa || null });
-  res.json({ ok: true });
-}));
+import { Router } from 'express';import { randomUUID } from 'node:crypto';import { pool,transaction } from '../config/db.js';import { asyncRoute,pagination,requiredFields,normalizeMasp,AppError } from '../lib/http.js';import { hashPassword } from '../lib/security.js';import { requireAuth,requirePermission } from '../middleware/auth.js';import { audit } from '../lib/audit.js';
+export const usersRoutes=Router();usersRoutes.use(requireAuth);
+usersRoutes.get('/',requirePermission('usuarios.visualizar'),asyncRoute(async(req,res)=>{const{page,limit,offset}=pagination(req),q=String(req.query.q||'').trim(),params=[];let where='';if(q){where='WHERE nome LIKE ? OR masp LIKE ? OR email LIKE ? OR cargo LIKE ? OR setor LIKE ?';const like=`%${q}%`;params.push(like,like,like,like,like);}const[rows]=await pool.execute(`SELECT id,id_pessoa,masp,nome,email,telefone,cargo,funcao,setor,status,trocar_senha,ultimo_acesso,criado_em,atualizado_em FROM usuarios ${where} ORDER BY nome LIMIT ? OFFSET ?`,[...params,limit,offset]);const[countRows]=await pool.execute(`SELECT COUNT(*) total FROM usuarios ${where}`,params);res.json({ok:true,data:rows,pagination:{page,limit,total:Number(countRows[0].total)}});}));
+usersRoutes.get('/permissions/catalog',requirePermission('usuarios.visualizar'),asyncRoute(async(_req,res)=>{const[rows]=await pool.execute('SELECT id,codigo,modulo,acao,descricao FROM permissoes WHERE ativa=1 ORDER BY modulo,codigo');res.json({ok:true,data:rows});}));
+usersRoutes.get('/:id/permissions',requirePermission('usuarios.visualizar'),asyncRoute(async(req,res)=>{const[rows]=await pool.execute(`SELECT p.codigo,p.modulo,p.descricao,COALESCE(up.permitido,0) permitido FROM permissoes p LEFT JOIN usuario_permissoes up ON up.id_permissao=p.id AND up.id_usuario=? WHERE p.ativa=1 ORDER BY p.modulo,p.codigo`,[req.params.id]);res.json({ok:true,data:rows});}));
+usersRoutes.post('/',requirePermission('usuarios.criar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['masp','nome','password']);const id=randomUUID(),senhaHash=await hashPassword(req.body.password);await pool.execute(`INSERT INTO usuarios (id,id_pessoa,masp,nome,email,telefone,cargo,funcao,setor,status,senha_hash,trocar_senha) VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`,[id,req.body.idPessoa||null,normalizeMasp(req.body.masp),String(req.body.nome).trim(),String(req.body.email||'').trim().toLowerCase()||null,req.body.telefone||null,req.body.cargo||null,req.body.funcao||null,req.body.setor||null,req.body.status||'ATIVO',senhaHash]);await audit(req,{module:'usuarios',action:'CRIAR',recordId:id,after:{...req.body,password:undefined}});res.status(201).json({ok:true,id});}));
+usersRoutes.put('/:id',requirePermission('usuarios.editar'),asyncRoute(async(req,res)=>{const[beforeRows]=await pool.execute('SELECT * FROM usuarios WHERE id=?',[req.params.id]),before=beforeRows[0];if(!before)throw new AppError(404,'USER_NOT_FOUND','Usuário não encontrado.');await pool.execute(`UPDATE usuarios SET nome=?,email=?,telefone=?,cargo=?,funcao=?,setor=?,status=?,atualizado_em=NOW() WHERE id=?`,[req.body.nome??before.nome,req.body.email??before.email,req.body.telefone??before.telefone,req.body.cargo??before.cargo,req.body.funcao??before.funcao,req.body.setor??before.setor,req.body.status??before.status,req.params.id]);await audit(req,{module:'usuarios',action:'EDITAR',recordId:req.params.id,before,after:req.body});res.json({ok:true});}));
+usersRoutes.post('/:id/reset-password',requirePermission('usuarios.editar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['newPassword']);const senhaHash=await hashPassword(req.body.newPassword);const[result]=await pool.execute(`UPDATE usuarios SET senha_hash=?,trocar_senha=1,tentativas=0,bloqueado_ate=NULL,atualizado_em=NOW() WHERE id=?`,[senhaHash,req.params.id]);if(!result.affectedRows)throw new AppError(404,'USER_NOT_FOUND','Usuário não encontrado.');await audit(req,{module:'usuarios',action:'RESETAR_SENHA',recordId:req.params.id,justification:req.body.justificativa||null});res.json({ok:true});}));
+usersRoutes.put('/:id/permissions',requirePermission('usuarios.gerenciar_permissoes'),asyncRoute(async(req,res)=>{if(!Array.isArray(req.body.permissions))throw new AppError(400,'INVALID_PERMISSIONS','Informe uma lista de permissões.');await transaction(async(db)=>{const[catalog]=await db.query('SELECT id,codigo FROM permissoes WHERE ativa=1'),desired=new Set(req.body.permissions);for(const permission of catalog)await db.execute(`INSERT INTO usuario_permissoes (id,id_usuario,id_permissao,permitido,concedido_por,concedido_em) VALUES (?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE permitido=VALUES(permitido),concedido_por=VALUES(concedido_por),concedido_em=NOW()`,[randomUUID(),req.params.id,permission.id,desired.has(permission.codigo)?1:0,req.session.user.id]);});await audit(req,{module:'usuarios',action:'ALTERAR_PERMISSOES',recordId:req.params.id,after:req.body.permissions,justification:req.body.justificativa||null});res.json({ok:true});}));
+usersRoutes.post('/permissions/bulk-grant',requirePermission('usuarios.gerenciar_permissoes'),asyncRoute(async(req,res)=>{const userIds=[...new Set(Array.isArray(req.body.userIds)?req.body.userIds.filter(Boolean):[])],codes=[...new Set(Array.isArray(req.body.permissions)?req.body.permissions.filter(Boolean):[])];if(!userIds.length||!codes.length)throw new AppError(400,'BULK_PERMISSION_EMPTY','Selecione ao menos um usuário e uma permissão.');if(userIds.length*codes.length>25000)throw new AppError(400,'BULK_PERMISSION_LIMIT','A seleção ultrapassa 25.000 combinações.');let created=0;await transaction(async(db)=>{const placeholders=codes.map(()=>'?').join(','),[permissions]=await db.execute(`SELECT id,codigo FROM permissoes WHERE ativa=1 AND codigo IN (${placeholders})`,codes);if(permissions.length!==codes.length)throw new AppError(400,'INVALID_PERMISSION','Uma ou mais permissões são inválidas.');for(const userId of userIds)for(const permission of permissions){await db.execute(`INSERT INTO usuario_permissoes (id,id_usuario,id_permissao,permitido,concedido_por,concedido_em) VALUES (?,?,?,1,?,NOW()) ON DUPLICATE KEY UPDATE permitido=1,concedido_por=VALUES(concedido_por),concedido_em=NOW()`,[randomUUID(),userId,permission.id,req.session.user.id]);created++;}});await audit(req,{module:'usuarios',action:'CONCEDER_PERMISSOES_EM_MASSA',recordId:`LOTE-${randomUUID()}`,after:{userIds,permissions:codes,combinations:created},justification:req.body.justificativa||null});res.json({ok:true,data:{users:userIds.length,permissions:codes.length,combinations:created}});}));

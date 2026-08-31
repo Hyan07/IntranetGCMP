@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { asyncRoute,requiredFields } from '../lib/http.js';
+import { requireAuth,requirePermission } from '../middleware/auth.js';
+import { audit } from '../lib/audit.js';
+import { getOwnProfile,getOwnRequests,requestProfileUpdate,listProfileRequests,reviewProfileRequest } from '../services/profile.service.js';
+export const profileRoutes=Router();profileRoutes.use(requireAuth);
+profileRoutes.get('/me',asyncRoute(async(req,res)=>{const[profile,requests]=await Promise.all([getOwnProfile(req.session.user.id),getOwnRequests(req.session.user.id)]);res.json({ok:true,data:{profile,requests}});}));
+profileRoutes.post('/requests',asyncRoute(async(req,res)=>{const result=await requestProfileUpdate(req.session.user,req.body||{});await audit(req,{module:'perfil',action:'SOLICITAR_ATUALIZACAO',recordId:result.id,after:result});res.status(201).json({ok:true,data:result});}));
+profileRoutes.get('/requests/admin',requirePermission('pessoal.editar'),asyncRoute(async(req,res)=>{res.json({ok:true,data:await listProfileRequests({status:req.query.status,q:req.query.q})});}));
+profileRoutes.post('/requests/:id/review',requirePermission('pessoal.editar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['decision']);const result=await reviewProfileRequest(req.session.user,req.params.id,req.body.decision,req.body.note);await audit(req,{module:'pessoal',action:result.status==='APROVADA'?'APROVAR_ATUALIZACAO_CADASTRAL':'RECUSAR_ATUALIZACAO_CADASTRAL',recordId:req.params.id,after:result,justification:req.body.note||null});res.json({ok:true,data:result});}));

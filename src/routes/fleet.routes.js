@@ -1,98 +1,19 @@
-import { Router } from 'express';
-import { randomUUID } from 'node:crypto';
-import { pool, transaction } from '../config/db.js';
-import { asyncRoute, pagination, requiredFields, AppError } from '../lib/http.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
-import { audit } from '../lib/audit.js';
-
-export const fleetRoutes = Router();
-fleetRoutes.use(requireAuth);
-
-fleetRoutes.get('/viaturas', requirePermission('frota.visualizar'), asyncRoute(async (req, res) => {
-  const { page, limit, offset } = pagination(req);
-  const q = String(req.query.q || '').trim();
-  const params = [];
-  let where = '';
-  if (q) {
-    where = 'WHERE prefixo LIKE ? OR placa LIKE ? OR marca LIKE ? OR modelo LIKE ?';
-    const like = `%${q}%`; params.push(like, like, like, like);
-  }
-  const [rows] = await pool.execute(
-    `SELECT id, prefixo, placa, tipo, marca, modelo, ano_fabricacao, ano_modelo, status, km_atual, setor, proxima_revisao_km, proxima_revisao_data
-       FROM viaturas ${where} ORDER BY prefixo LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
-  const [countRows] = await pool.execute(`SELECT COUNT(*) total FROM viaturas ${where}`, params);
-  res.json({ ok: true, data: rows, pagination: { page, limit, total: Number(countRows[0].total) } });
-}));
-
-fleetRoutes.post('/viaturas', requirePermission('frota.viaturas.criar'), asyncRoute(async (req, res) => {
-  requiredFields(req.body, ['prefixo', 'placa']);
-  const id = randomUUID();
-  await pool.execute(
-    `INSERT INTO viaturas (id, prefixo, placa, tipo, marca, modelo, ano_fabricacao, ano_modelo, cor, combustivel, setor, status, km_atual, observacoes, criado_por)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id, String(req.body.prefixo).trim(), String(req.body.placa).trim().toUpperCase(), req.body.tipo || null,
-      req.body.marca || null, req.body.modelo || null, req.body.anoFabricacao || null, req.body.anoModelo || null,
-      req.body.cor || null, req.body.combustivel || null, req.body.setor || null, req.body.status || 'DISPONIVEL',
-      Number(req.body.kmAtual || 0), req.body.observacoes || null, req.session.user.id
-    ]
-  );
-  await audit(req, { module: 'frota', action: 'CRIAR_VIATURA', recordId: id, after: req.body });
-  res.status(201).json({ ok: true, id });
-}));
-
-fleetRoutes.post('/viaturas/:id/km', requirePermission('frota.km.registrar'), asyncRoute(async (req, res) => {
-  requiredFields(req.body, ['km']);
-  const newKm = Number(req.body.km);
-  if (!Number.isFinite(newKm) || newKm < 0) throw new AppError(400, 'INVALID_KM', 'Quilometragem inválida.');
-
-  await transaction(async (db) => {
-    const [rows] = await db.execute('SELECT id, prefixo, km_atual FROM viaturas WHERE id=? FOR UPDATE', [req.params.id]);
-    if (!rows[0]) throw new AppError(404, 'VEHICLE_NOT_FOUND', 'Viatura não localizada.');
-    const oldKm = Number(rows[0].km_atual || 0);
-    if (newKm < oldKm && !String(req.body.justificativa || '').trim()) {
-      throw new AppError(400, 'KM_REQUIRES_JUSTIFICATION', 'Informe uma justificativa para reduzir a quilometragem.');
-    }
-    await db.execute('UPDATE viaturas SET km_atual=?, km_atualizado_em=NOW(), atualizado_em=NOW(), atualizado_por=? WHERE id=?', [newKm, req.session.user.id, req.params.id]);
-    await db.execute(
-      `INSERT INTO historico_km (id, id_viatura, prefixo, km_anterior, km_novo, origem, id_usuario, justificativa)
-       VALUES (?, ?, ?, ?, ?, 'ATUALIZACAO_MANUAL', ?, ?)`,
-      [randomUUID(), req.params.id, rows[0].prefixo, oldKm, newKm, req.session.user.id, req.body.justificativa || null]
-    );
-  });
-  await audit(req, { module: 'frota', action: 'ATUALIZAR_KM', recordId: req.params.id, after: req.body });
-  res.json({ ok: true });
-}));
-
-fleetRoutes.get('/defeitos', requirePermission('frota.defeitos.visualizar'), asyncRoute(async (req, res) => {
-  const [rows] = await pool.execute(
-    `SELECT d.*, v.prefixo, v.placa
-       FROM defeitos_frota d JOIN viaturas v ON v.id=d.id_viatura
-      ORDER BY FIELD(d.status,'ABERTO','EM_ANALISE','EM_MANUTENCAO','RESOLVIDO'), d.criado_em DESC`
-  );
-  res.json({ ok: true, data: rows });
-}));
-
-fleetRoutes.post('/defeitos', requirePermission('frota.defeitos.criar'), asyncRoute(async (req, res) => {
-  requiredFields(req.body, ['idViatura', 'descricao']);
-  const id = randomUUID();
-  await pool.execute(
-    `INSERT INTO defeitos_frota (id, id_viatura, titulo, descricao, gravidade, status, registrado_por, registrado_por_nome, observacoes)
-     VALUES (?, ?, ?, ?, ?, 'ABERTO', ?, ?, ?)`,
-    [id, req.body.idViatura, req.body.titulo || 'Defeito informado', req.body.descricao, req.body.gravidade || 'MEDIA', req.session.user.id, req.session.user.nome, req.body.observacoes || null]
-  );
-  await audit(req, { module: 'frota', action: 'REGISTRAR_DEFEITO', recordId: id, after: req.body });
-  res.status(201).json({ ok: true, id });
-}));
-
-fleetRoutes.post('/defeitos/:id/resolver', requirePermission('frota.defeitos.resolver'), asyncRoute(async (req, res) => {
-  const [result] = await pool.execute(
-    `UPDATE defeitos_frota SET status='RESOLVIDO', resolvido_em=NOW(), resolvido_por=?, solucao=?, atualizado_em=NOW() WHERE id=?`,
-    [req.session.user.id, req.body.solucao || null, req.params.id]
-  );
-  if (!result.affectedRows) throw new AppError(404, 'DEFECT_NOT_FOUND', 'Defeito não localizado.');
-  await audit(req, { module: 'frota', action: 'RESOLVER_DEFEITO', recordId: req.params.id, after: req.body });
-  res.json({ ok: true });
-}));
+import { Router } from 'express';import { randomUUID } from 'node:crypto';import { pool,transaction } from '../config/db.js';import { asyncRoute,pagination,requiredFields,AppError } from '../lib/http.js';import { requireAuth,requirePermission } from '../middleware/auth.js';import { audit } from '../lib/audit.js';import { startShift,endShift,listOpenShifts,listShiftHistory,listMaintenances,createMaintenance,finishMaintenance,listTires,installTire,removeTire } from '../services/fleet.service.js';
+export const fleetRoutes=Router();fleetRoutes.use(requireAuth);
+fleetRoutes.get('/viaturas',requirePermission('frota.visualizar'),asyncRoute(async(req,res)=>{const{page,limit,offset}=pagination(req),q=String(req.query.q||'').trim(),params=[];let where='';if(q){where='WHERE prefixo LIKE ? OR placa LIKE ? OR marca LIKE ? OR modelo LIKE ?';const like=`%${q}%`;params.push(like,like,like,like);}const[rows]=await pool.execute(`SELECT id,prefixo,placa,tipo,marca,modelo,ano_fabricacao,ano_modelo,status,km_atual,setor,proxima_revisao_km,proxima_revisao_data FROM viaturas ${where} ORDER BY prefixo LIMIT ? OFFSET ?`,[...params,limit,offset]);const[countRows]=await pool.execute(`SELECT COUNT(*) total FROM viaturas ${where}`,params);res.json({ok:true,data:rows,pagination:{page,limit,total:Number(countRows[0].total)}});}));
+fleetRoutes.post('/viaturas',requirePermission('frota.viaturas.criar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['prefixo','placa']);const id=randomUUID();await pool.execute(`INSERT INTO viaturas (id,prefixo,placa,tipo,marca,modelo,ano_fabricacao,ano_modelo,cor,combustivel,setor,status,km_atual,observacoes,criado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[id,String(req.body.prefixo).trim(),String(req.body.placa).trim().toUpperCase(),req.body.tipo||null,req.body.marca||null,req.body.modelo||null,req.body.anoFabricacao||null,req.body.anoModelo||null,req.body.cor||null,req.body.combustivel||null,req.body.setor||null,req.body.status||'DISPONIVEL',Number(req.body.kmAtual||0),req.body.observacoes||null,req.session.user.id]);await audit(req,{module:'frota',action:'CRIAR_VIATURA',recordId:id,after:req.body});res.status(201).json({ok:true,id});}));
+fleetRoutes.put('/viaturas/:id',requirePermission('frota.viaturas.editar'),asyncRoute(async(req,res)=>{const[beforeRows]=await pool.execute('SELECT * FROM viaturas WHERE id=?',[req.params.id]),before=beforeRows[0];if(!before)throw new AppError(404,'VEHICLE_NOT_FOUND','Viatura não localizada.');const next={prefixo:String(req.body.prefixo??before.prefixo).trim(),placa:String(req.body.placa??before.placa).trim().toUpperCase(),tipo:req.body.tipo??before.tipo,marca:req.body.marca??before.marca,modelo:req.body.modelo??before.modelo,setor:req.body.setor??before.setor,status:req.body.status??before.status,observacoes:req.body.observacoes??before.observacoes};await pool.execute(`UPDATE viaturas SET prefixo=?,placa=?,tipo=?,marca=?,modelo=?,setor=?,status=?,observacoes=?,atualizado_em=NOW(),atualizado_por=? WHERE id=?`,[next.prefixo,next.placa,next.tipo,next.marca,next.modelo,next.setor,next.status,next.observacoes,req.session.user.id,req.params.id]);await audit(req,{module:'frota',action:'EDITAR_VIATURA',recordId:req.params.id,before,after:next});res.json({ok:true});}));
+fleetRoutes.post('/viaturas/:id/km',requirePermission('frota.km.registrar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['km']);const newKm=Number(req.body.km);if(!Number.isFinite(newKm)||newKm<0)throw new AppError(400,'INVALID_KM','Quilometragem inválida.');await transaction(async(db)=>{const[rows]=await db.execute('SELECT id,prefixo,km_atual FROM viaturas WHERE id=? FOR UPDATE',[req.params.id]);if(!rows[0])throw new AppError(404,'VEHICLE_NOT_FOUND','Viatura não localizada.');const oldKm=Number(rows[0].km_atual||0);if(newKm<oldKm&&!String(req.body.justificativa||'').trim())throw new AppError(400,'KM_REQUIRES_JUSTIFICATION','Informe uma justificativa para reduzir a quilometragem.');await db.execute('UPDATE viaturas SET km_atual=?,km_atualizado_em=NOW(),atualizado_em=NOW(),atualizado_por=? WHERE id=?',[newKm,req.session.user.id,req.params.id]);await db.execute(`INSERT INTO historico_km (id,id_viatura,prefixo,km_anterior,km_novo,origem,id_usuario,justificativa) VALUES (?,?,?,?,?,'ATUALIZACAO_MANUAL',?,?)`,[randomUUID(),req.params.id,rows[0].prefixo,oldKm,newKm,req.session.user.id,req.body.justificativa||null]);});await audit(req,{module:'frota',action:'ATUALIZAR_KM',recordId:req.params.id,after:req.body});res.json({ok:true});}));
+fleetRoutes.get('/turnos/abertos',requirePermission('frota.visualizar'),asyncRoute(async(_req,res)=>res.json({ok:true,data:await listOpenShifts()})));
+fleetRoutes.get('/turnos/historico',requirePermission('frota.visualizar'),asyncRoute(async(req,res)=>res.json({ok:true,data:await listShiftHistory(req.query.limit)})));
+fleetRoutes.post('/turnos',requirePermission('frota.turnos.iniciar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['idViatura','kmInicial']);const data=await startShift(req.session.user,req.session.permissions||[],req.body);await audit(req,{module:'frota',action:'INICIAR_TURNO',recordId:data.id,after:req.body});res.status(201).json({ok:true,data});}));
+fleetRoutes.post('/turnos/:id/encerrar',requirePermission('frota.turnos.encerrar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['kmFinal']);const data=await endShift(req.session.user,req.session.permissions||[],req.params.id,req.body);await audit(req,{module:'frota',action:'ENCERRAR_TURNO',recordId:req.params.id,after:req.body});res.json({ok:true,data});}));
+fleetRoutes.get('/defeitos',requirePermission('frota.defeitos.visualizar'),asyncRoute(async(_req,res)=>{const[rows]=await pool.execute(`SELECT d.*,v.prefixo,v.placa FROM defeitos_frota d JOIN viaturas v ON v.id=d.id_viatura ORDER BY FIELD(d.status,'ABERTO','EM_ANALISE','EM_MANUTENCAO','RESOLVIDO'),d.criado_em DESC`);res.json({ok:true,data:rows});}));
+fleetRoutes.post('/defeitos',requirePermission('frota.defeitos.criar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['idViatura','descricao']);const id=randomUUID();await pool.execute(`INSERT INTO defeitos_frota (id,id_viatura,titulo,descricao,gravidade,status,registrado_por,registrado_por_nome,observacoes) VALUES (?,?,?,?,?,'ABERTO',?,?,?)`,[id,req.body.idViatura,req.body.titulo||'Defeito informado',req.body.descricao,req.body.gravidade||'MEDIA',req.session.user.id,req.session.user.nome,req.body.observacoes||null]);await audit(req,{module:'frota',action:'REGISTRAR_DEFEITO',recordId:id,after:req.body});res.status(201).json({ok:true,id});}));
+fleetRoutes.post('/defeitos/:id/resolver',requirePermission('frota.defeitos.resolver'),asyncRoute(async(req,res)=>{const[result]=await pool.execute(`UPDATE defeitos_frota SET status='RESOLVIDO',resolvido_em=NOW(),resolvido_por=?,solucao=?,atualizado_em=NOW() WHERE id=?`,[req.session.user.id,req.body.solucao||null,req.params.id]);if(!result.affectedRows)throw new AppError(404,'DEFECT_NOT_FOUND','Defeito não localizado.');await audit(req,{module:'frota',action:'RESOLVER_DEFEITO',recordId:req.params.id,after:req.body});res.json({ok:true});}));
+fleetRoutes.get('/manutencoes',requirePermission('frota.manutencoes.visualizar'),asyncRoute(async(_req,res)=>res.json({ok:true,data:await listMaintenances()})));
+fleetRoutes.post('/manutencoes',requirePermission('frota.manutencoes.gerenciar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['idViatura','descricao']);const data=await createMaintenance(req.session.user,req.body);await audit(req,{module:'frota',action:'CRIAR_MANUTENCAO',recordId:data.id,after:req.body});res.status(201).json({ok:true,data});}));
+fleetRoutes.post('/manutencoes/:id/concluir',requirePermission('frota.manutencoes.gerenciar'),asyncRoute(async(req,res)=>{const data=await finishMaintenance(req.session.user,req.params.id,req.body||{});await audit(req,{module:'frota',action:'CONCLUIR_MANUTENCAO',recordId:req.params.id,after:req.body});res.json({ok:true,data});}));
+fleetRoutes.get('/pneus',requirePermission('frota.pneus.visualizar'),asyncRoute(async(req,res)=>res.json({ok:true,data:await listTires(req.query.idViatura||'')})));
+fleetRoutes.post('/pneus',requirePermission('frota.pneus.gerenciar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['idViatura','posicao']);const data=await installTire(req.body);await audit(req,{module:'frota',action:'INSTALAR_PNEU',recordId:data.id,after:req.body});res.status(201).json({ok:true,data});}));
+fleetRoutes.post('/pneus/:id/remover',requirePermission('frota.pneus.gerenciar'),asyncRoute(async(req,res)=>{const data=await removeTire(req.params.id,req.body||{});await audit(req,{module:'frota',action:'REMOVER_PNEU',recordId:req.params.id,after:req.body});res.json({ok:true,data});}));
