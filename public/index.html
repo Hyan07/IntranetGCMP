@@ -6,94 +6,23 @@
   <meta name="color-scheme" content="light">
   <title>Intranet GCMP</title>
   <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/v5.css">
 </head>
 <body>
   <section id="auth-view" class="auth-view">
-    <div class="auth-visual">
-      <div class="auth-visual-content">
-        <div class="brand-mark brand-mark-large">GC</div>
-        <p class="eyebrow light">Gestão institucional integrada</p>
-        <h1>Recursos sob controle.<br>Decisões com rastreabilidade.</h1>
-        <p class="auth-lead">Pessoal, patrimônio, viaturas e fluxos administrativos em uma única intranet segura.</p>
-        <div class="auth-features">
-          <span>Acesso protegido</span>
-          <span>Auditoria completa</span>
-          <span>Responsivo</span>
-        </div>
-      </div>
-      <p class="auth-visual-footer">Uso institucional e controlado</p>
-    </div>
-
+    <div class="auth-visual"><div class="auth-visual-content"><div class="brand-mark brand-mark-large">GC</div><p class="eyebrow light">Gestão institucional integrada</p><h1>Recursos sob controle.<br>Decisões com rastreabilidade.</h1><p class="auth-lead">Pessoal, patrimônio, viaturas e fluxos administrativos em uma única intranet segura.</p><div class="auth-features"><span>Acesso protegido</span><span>Auditoria completa</span><span>Responsivo</span></div></div><p class="auth-visual-footer">Uso institucional e controlado</p></div>
     <div class="auth-panel">
-      <div class="auth-card" id="login-panel">
-        <p class="eyebrow">Área segura</p>
-        <h2>Acesse sua conta</h2>
-        <p class="muted">Informe sua matrícula/MASP e senha institucional.</p>
-        <form id="login-form" class="form-stack">
-          <label class="field"><span>Matrícula ou MASP</span><input name="masp" inputmode="numeric" autocomplete="username" placeholder="000000-00" required></label>
-          <label class="field"><span>Senha</span><input name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required></label>
-          <div id="login-error" class="form-message error" hidden></div>
-          <button class="btn btn-primary btn-block" type="submit">Entrar</button>
-          <button class="btn-link" id="open-recovery" type="button">Esqueci minha senha</button>
-        </form>
-      </div>
-
-      <div class="auth-card" id="recovery-panel" hidden>
-        <button class="btn-link back-link" id="back-login" type="button">← Voltar</button>
-        <p class="eyebrow">Recuperação</p>
-        <h2>Redefina sua senha</h2>
-        <form id="recovery-request-form" class="form-stack">
-          <label class="field"><span>MASP</span><input name="masp" required></label>
-          <label class="field"><span>E-mail cadastrado</span><input name="email" type="email" required></label>
-          <div class="form-message recovery-message" hidden></div>
-          <button class="btn btn-primary btn-block" type="submit">Enviar código</button>
-          <button class="btn-link" id="already-have-code" type="button">Já tenho um código</button>
-        </form>
-        <form id="recovery-confirm-form" class="form-stack" hidden>
-          <label class="field"><span>MASP</span><input name="masp" required></label>
-          <label class="field"><span>E-mail</span><input name="email" type="email" required></label>
-          <label class="field"><span>Código</span><input name="code" maxlength="6" inputmode="numeric" required></label>
-          <label class="field"><span>Nova senha</span><input name="newPassword" type="password" required></label>
-          <div class="form-message recovery-message" hidden></div>
-          <button class="btn btn-primary btn-block" type="submit">Criar nova senha</button>
-        </form>
-      </div>
-      <p class="auth-version">Versão <span id="auth-version">4.0.0</span></p>
+      <div class="auth-card" id="login-panel"><p class="eyebrow">Área segura</p><h2>Acesse sua conta</h2><p class="muted">Informe sua matrícula/MASP e senha institucional.</p><form id="login-form" class="form-stack"><label class="field"><span>Matrícula ou MASP</span><input name="masp" inputmode="numeric" autocomplete="username" placeholder="000000-00" required></label><label class="field"><span>Senha</span><input name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required></label><div id="login-error" class="form-message error" hidden></div><button class="btn btn-primary btn-block" type="submit">Entrar</button><button class="btn-link" id="open-recovery" type="button">Esqueci minha senha</button></form></div>
+      <div class="auth-card" id="recovery-panel" hidden><button class="btn-link back-link" id="back-login" type="button">← Voltar</button><p class="eyebrow">Recuperação</p><h2>Redefina sua senha</h2><form id="recovery-request-form" class="form-stack"><label class="field"><span>MASP</span><input name="masp" required></label><label class="field"><span>E-mail cadastrado</span><input name="email" type="email" required></label><div class="form-message recovery-message" hidden></div><button class="btn btn-primary btn-block" type="submit">Enviar código</button><button class="btn-link" id="already-have-code" type="button">Já tenho um código</button></form><form id="recovery-confirm-form" class="form-stack" hidden><label class="field"><span>MASP</span><input name="masp" required></label><label class="field"><span>E-mail</span><input name="email" type="email" required></label><label class="field"><span>Código</span><input name="code" maxlength="6" inputmode="numeric" required></label><label class="field"><span>Nova senha</span><input name="newPassword" type="password" required></label><div class="form-message recovery-message" hidden></div><button class="btn btn-primary btn-block" type="submit">Criar nova senha</button></form></div>
+      <p class="auth-version">Versão <span id="auth-version">5.0.0</span></p>
     </div>
   </section>
-
   <div id="application" class="application" hidden>
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-brand">
-        <div class="brand-mark">GC</div>
-        <div><strong>Recursos</strong><small>Intranet institucional</small></div>
-      </div>
-      <nav id="main-menu" class="main-menu"></nav>
-      <div class="sidebar-footer">
-        <button class="sidebar-user" data-page="perfil">
-          <span id="sidebar-avatar" class="avatar">AD</span>
-          <span><strong id="sidebar-user-name">Usuário</strong><small id="sidebar-user-masp">000000-00</small></span>
-        </button>
-        <button id="sidebar-logout" class="menu-item logout-item">Sair</button>
-      </div>
-    </aside>
-
-    <header class="topbar">
-      <button id="mobile-menu-button" class="icon-btn" aria-label="Abrir menu">☰</button>
-      <div class="page-heading"><span id="page-breadcrumb">Intranet</span><h1 id="page-title">Início</h1></div>
-      <div class="topbar-actions">
-        <span class="connection-indicator"><span></span>Sistema disponível</span>
-        <div class="header-profile"><span id="header-avatar" class="avatar">AD</span><span><strong id="header-user-name">Usuário</strong><small id="header-user-role">Acesso institucional</small></span></div>
-      </div>
-    </header>
-
-    <main id="main-content" class="main-content">
-      <div class="route-loading">Carregando informações…</div>
-    </main>
+    <aside id="sidebar" class="sidebar"><div class="sidebar-brand"><div class="brand-mark">GC</div><div><strong>Recursos</strong><small>Intranet institucional</small></div></div><nav id="main-menu" class="main-menu"></nav><div class="sidebar-footer"><button class="sidebar-user" data-page="perfil"><span id="sidebar-avatar" class="avatar">AD</span><span><strong id="sidebar-user-name">Usuário</strong><small id="sidebar-user-masp">000000-00</small></span></button><button id="sidebar-logout" class="menu-item logout-item">Sair</button></div></aside>
+    <header class="topbar"><button id="mobile-menu-button" class="icon-btn" aria-label="Abrir menu">☰</button><div class="page-heading"><span id="page-breadcrumb">Intranet</span><h1 id="page-title">Início</h1></div><div class="topbar-actions"><span class="connection-indicator"><span></span>Sistema disponível</span><div class="header-profile"><span id="header-avatar" class="avatar">AD</span><span><strong id="header-user-name">Usuário</strong><small id="header-user-role">Acesso institucional</small></span></div></div></header>
+    <main id="main-content" class="main-content"><div class="route-loading">Carregando informações…</div></main>
   </div>
-
   <div id="toast-container" class="toast-container"></div>
-
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

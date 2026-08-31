@@ -1,83 +1,14 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { pool } from '../config/db.js';
-import { asyncRoute, pagination, requiredFields, normalizeMasp, AppError } from '../lib/http.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { pool,transaction } from '../config/db.js';
+import { asyncRoute,pagination,requiredFields,normalizeMasp,AppError } from '../lib/http.js';
+import { requireAuth,requirePermission } from '../middleware/auth.js';
 import { audit } from '../lib/audit.js';
-
-export const personnelRoutes = Router();
-personnelRoutes.use(requireAuth);
-
-personnelRoutes.get('/', requirePermission('pessoal.visualizar'), asyncRoute(async (req, res) => {
-  const { page, limit, offset } = pagination(req);
-  const search = String(req.query.q || '').trim();
-  const status = String(req.query.status || '').trim();
-  const where = [];
-  const params = [];
-  if (search) {
-    where.push('(nome_completo LIKE ? OR masp LIKE ? OR cpf LIKE ? OR cargo LIKE ? OR setor LIKE ?)');
-    const like = `%${search}%`;
-    params.push(like, like, like, like, like);
-  }
-  if (status) { where.push('status = ?'); params.push(status); }
-  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const [rows] = await pool.execute(
-    `SELECT id, nome_completo, nome_social, masp, cpf, telefone, email, cargo, funcao, setor, equipe, status, foto_url, atualizado_em
-       FROM pessoas ${clause}
-      ORDER BY nome_completo LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
-  const [countRows] = await pool.execute(`SELECT COUNT(*) total FROM pessoas ${clause}`, params);
-  res.json({ ok: true, data: rows, pagination: { page, limit, total: Number(countRows[0].total) } });
-}));
-
-personnelRoutes.get('/:id', requirePermission('pessoal.visualizar'), asyncRoute(async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM pessoas WHERE id = ?', [req.params.id]);
-  if (!rows[0]) throw new AppError(404, 'PERSON_NOT_FOUND', 'Pessoa não localizada.');
-  res.json({ ok: true, data: rows[0] });
-}));
-
-personnelRoutes.post('/', requirePermission('pessoal.criar'), asyncRoute(async (req, res) => {
-  requiredFields(req.body, ['nomeCompleto', 'masp']);
-  const record = {
-    id: randomUUID(),
-    nomeCompleto: String(req.body.nomeCompleto).trim(),
-    masp: normalizeMasp(req.body.masp),
-    cpf: String(req.body.cpf || '').replace(/\D/g, '') || null,
-    telefone: String(req.body.telefone || '').trim() || null,
-    email: String(req.body.email || '').trim().toLowerCase() || null,
-    cargo: String(req.body.cargo || '').trim() || null,
-    funcao: String(req.body.funcao || '').trim() || null,
-    setor: String(req.body.setor || '').trim() || null,
-    equipe: String(req.body.equipe || '').trim() || null,
-    status: String(req.body.status || 'ATIVO').toUpperCase()
-  };
-  await pool.execute(
-    `INSERT INTO pessoas (id, nome_completo, masp, cpf, telefone, email, cargo, funcao, setor, equipe, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [record.id, record.nomeCompleto, record.masp, record.cpf, record.telefone, record.email, record.cargo, record.funcao, record.setor, record.equipe, record.status]
-  );
-  await audit(req, { module: 'pessoal', action: 'CRIAR', recordId: record.id, after: record });
-  res.status(201).json({ ok: true, data: record });
-}));
-
-personnelRoutes.put('/:id', requirePermission('pessoal.editar'), asyncRoute(async (req, res) => {
-  const [beforeRows] = await pool.execute('SELECT * FROM pessoas WHERE id = ?', [req.params.id]);
-  if (!beforeRows[0]) throw new AppError(404, 'PERSON_NOT_FOUND', 'Pessoa não localizada.');
-  const updates = {
-    nome_completo: String(req.body.nomeCompleto ?? beforeRows[0].nome_completo).trim(),
-    telefone: String(req.body.telefone ?? beforeRows[0].telefone ?? '').trim() || null,
-    email: String(req.body.email ?? beforeRows[0].email ?? '').trim().toLowerCase() || null,
-    cargo: String(req.body.cargo ?? beforeRows[0].cargo ?? '').trim() || null,
-    funcao: String(req.body.funcao ?? beforeRows[0].funcao ?? '').trim() || null,
-    setor: String(req.body.setor ?? beforeRows[0].setor ?? '').trim() || null,
-    equipe: String(req.body.equipe ?? beforeRows[0].equipe ?? '').trim() || null,
-    status: String(req.body.status ?? beforeRows[0].status).toUpperCase()
-  };
-  await pool.execute(
-    `UPDATE pessoas SET nome_completo=?, telefone=?, email=?, cargo=?, funcao=?, setor=?, equipe=?, status=?, atualizado_em=NOW() WHERE id=?`,
-    [updates.nome_completo, updates.telefone, updates.email, updates.cargo, updates.funcao, updates.setor, updates.equipe, updates.status, req.params.id]
-  );
-  await audit(req, { module: 'pessoal', action: 'EDITAR', recordId: req.params.id, before: beforeRows[0], after: updates });
-  res.json({ ok: true });
-}));
+export const personnelRoutes=Router();personnelRoutes.use(requireAuth);
+const editableColumns={nomeCompleto:'nome_completo',nomeSocial:'nome_social',masp:'masp',cpf:'cpf',rg:'rg',dataNascimento:'data_nascimento',sexo:'sexo',telefone:'telefone',email:'email',endereco:'endereco',cargo:'cargo',funcao:'funcao',setor:'setor',equipe:'equipe',dataAdmissao:'data_admissao',status:'status',tipoVinculo:'tipo_vinculo',nomePai:'nome_pai',nomeMae:'nome_mae',paisNascimento:'pais_nascimento',municipioNascimento:'municipio_nascimento',ufNascimento:'uf_nascimento',estadoCivil:'estado_civil',rgDataEmissao:'rg_data_emissao',rgOrgaoExpedidor:'rg_orgao_expedidor',rgUf:'rg_uf',tituloEleitor:'titulo_eleitor',municipioEndereco:'municipio_endereco',ufEndereco:'uf_endereco',cep:'cep',bairro:'bairro',tipoSanguineo:'tipo_sanguineo',porteArmaNumero:'porte_arma_numero',armaInstitucionalNumero:'arma_institucional_numero',porteArmaValidade:'porte_arma_validade',fotoUrl:'foto_url',observacoes:'observacoes'};
+function normalize(key,value){if(value==null||value==='')return null;if(key==='masp')return normalizeMasp(value);if(key==='cpf')return String(value).replace(/\D/g,'')||null;if(key==='email')return String(value).trim().toLowerCase()||null;if(['status','sexo','ufNascimento','rgUf','ufEndereco','estadoCivil','tipoSanguineo'].includes(key))return String(value).trim().toUpperCase();return typeof value==='string'?value.trim():value;}
+personnelRoutes.get('/',requirePermission('pessoal.visualizar'),asyncRoute(async(req,res)=>{const{page,limit,offset}=pagination(req),search=String(req.query.q||'').trim(),status=String(req.query.status||'').trim(),where=[],params=[];if(search){where.push('(nome_completo LIKE ? OR masp LIKE ? OR cpf LIKE ? OR cargo LIKE ? OR setor LIKE ?)');const like=`%${search}%`;params.push(like,like,like,like,like);}if(status){where.push('status=?');params.push(status.toUpperCase());}const clause=where.length?`WHERE ${where.join(' AND ')}`:'';const[rows]=await pool.execute(`SELECT id,nome_completo,nome_social,masp,cpf,telefone,email,cargo,funcao,setor,equipe,status,foto_url,atualizado_em FROM pessoas ${clause} ORDER BY nome_completo LIMIT ? OFFSET ?`,[...params,limit,offset]);const[countRows]=await pool.execute(`SELECT COUNT(*) total FROM pessoas ${clause}`,params);res.json({ok:true,data:rows,pagination:{page,limit,total:Number(countRows[0].total)}});}));
+personnelRoutes.get('/:id',requirePermission('pessoal.visualizar'),asyncRoute(async(req,res)=>{const[rows]=await pool.execute('SELECT * FROM pessoas WHERE id=?',[req.params.id]);if(!rows[0])throw new AppError(404,'PERSON_NOT_FOUND','Pessoa não localizada.');res.json({ok:true,data:rows[0]});}));
+personnelRoutes.get('/:id/historico',requirePermission('pessoal.visualizar'),asyncRoute(async(req,res)=>{const[rows]=await pool.execute(`SELECT id,data_hora,tipo,valor_anterior,valor_novo,id_usuario,observacoes FROM historico_funcional WHERE id_pessoa=? ORDER BY data_hora DESC LIMIT 300`,[req.params.id]);res.json({ok:true,data:rows});}));
+personnelRoutes.post('/',requirePermission('pessoal.criar'),asyncRoute(async(req,res)=>{requiredFields(req.body,['nomeCompleto','masp']);const id=randomUUID(),payload={...req.body},columns=['id'],values=[id],placeholders=['?'];for(const[key,column]of Object.entries(editableColumns))if(Object.prototype.hasOwnProperty.call(payload,key)){columns.push(column);values.push(normalize(key,payload[key]));placeholders.push('?');}if(!columns.includes('status')){columns.push('status');values.push('ATIVO');placeholders.push('?');}await pool.execute(`INSERT INTO pessoas (${columns.join(',')}) VALUES (${placeholders.join(',')})`,values);await pool.execute(`INSERT INTO historico_funcional (id,id_pessoa,tipo,valor_novo,id_usuario,observacoes) VALUES (?,?,'CADASTRO',?,?,'Cadastro inicial')`,[randomUUID(),id,JSON.stringify(payload),req.session.user.id]);await audit(req,{module:'pessoal',action:'CRIAR',recordId:id,after:payload});res.status(201).json({ok:true,id});}));
+personnelRoutes.put('/:id',requirePermission('pessoal.editar'),asyncRoute(async(req,res)=>{await transaction(async(db)=>{const[rows]=await db.execute('SELECT * FROM pessoas WHERE id=? FOR UPDATE',[req.params.id]),before=rows[0];if(!before)throw new AppError(404,'PERSON_NOT_FOUND','Pessoa não localizada.');const assignments=[],values=[],after={...before};for(const[key,column]of Object.entries(editableColumns))if(Object.prototype.hasOwnProperty.call(req.body,key)){const value=normalize(key,req.body[key]);assignments.push(`${column}=?`);values.push(value);after[column]=value;}if(!assignments.length)throw new AppError(400,'NO_CHANGES','Nenhum campo foi informado para alteração.');values.push(req.params.id);await db.execute(`UPDATE pessoas SET ${assignments.join(',')},atualizado_em=NOW() WHERE id=?`,values);await db.execute(`INSERT INTO historico_funcional (id,id_pessoa,tipo,valor_anterior,valor_novo,id_usuario,observacoes) VALUES (?,?,'EDICAO',?,?,?,?)`,[randomUUID(),req.params.id,JSON.stringify(before),JSON.stringify(after),req.session.user.id,req.body.justificativa||null]);await audit(req,{module:'pessoal',action:'EDITAR',recordId:req.params.id,before,after,justification:req.body.justificativa||null});});res.json({ok:true});}));
